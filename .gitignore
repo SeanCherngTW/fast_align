@@ -5,6 +5,7 @@
 fast_align
 Makefile
 build/
+cmake/
 
 # Compiled Dynamic libraries
 *.so

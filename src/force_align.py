@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 
 import os
+import errno
 import subprocess
 import sys
 import threading
+from signal import signal, SIGPIPE, SIG_DFL, SIG_IGN
+signal(SIGPIPE, SIG_IGN)
+
 
 # Simplified, non-threadsafe version for force_align.py
 # Use the version in realtime for development
@@ -32,16 +36,24 @@ class Aligner:
         # f words ||| e words ||| links ||| score
         f = self.fwd_align.stdout.readline().split('|||')[2].strip().split('x')
         fwd_line = f[0]
-        fwd_score =float(f[1])
+        if len(f) > 1:
+            fwd_score = float(f[1])
+        else:
+            fwd_score =  -99999.0
+            print('Error format ', f)
         r = self.rev_align.stdout.readline().split('|||')[2].strip().split('x')
         rev_line = r[0]
-        rev_score = float(r[1])
+        if len(f) > 1:
+            rev_score = float(f[1])
+        else:
+            rev_score =  -99999.0
+            print('Error format ', f)
         global_score = (fwd_score+rev_score)/2
         self.tools.stdin.write('{}\n'.format(fwd_line))
         self.tools.stdin.write('{}\n'.format(rev_line))
         al_line = self.tools.stdout.readline().strip()
         return al_line, global_score
- 
+
     def close(self):
         self.fwd_align.stdin.close()
         self.fwd_align.wait()
@@ -62,7 +74,7 @@ class Aligner:
         return (T, m)
 
 def popen_io(cmd):
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, bufsize=1, universal_newlines=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     def consume(s):
         for _ in s:
             pass
@@ -92,7 +104,7 @@ def main():
         sys.stdout.flush()
 
     aligner.close()
-    
+
 if __name__ == '__main__':
     main()
 
